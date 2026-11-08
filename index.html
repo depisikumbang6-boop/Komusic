@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Komusic - Local Audio Player</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        iosBg: '#09090b',
+                        iosCard: 'rgba(255, 255, 255, 0.05)',
+                        brandViolet: '#8b5cf6',
+                        brandPink: '#ec4899',
+                        brandCyan: '#06b6d4',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+            overflow-x: hidden;
+        }
+
+        /* --- LIQUID GLASSMORPISM STYLES --- */
+        .liquid-glass {
+            background: linear-gradient(
+                135deg, 
+                rgba(255, 255, 255, 0.16) 0%, 
+                rgba(255, 255, 255, 0.03) 50%, 
+                rgba(255, 255, 255, 0.08) 100%
+            );
+            backdrop-filter: blur(32px) saturate(210%);
+            -webkit-backdrop-filter: blur(32px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 
+                0 20px 50px rgba(0, 0, 0, 0.6),
+                inset 0 1px 1px rgba(255, 255, 255, 0.4),
+                inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .liquid-glass-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .liquid-pill {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .squircle {
+            border-radius: 22.5%;
+        }
+
+        /* Vinyl Record Animations */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-record-spin {
+            animation: spin 16s linear infinite;
+        }
+        .paused-spin {
+            animation-play-state: paused;
+        }
+
+        /* Ambient Glow Pulse */
+        @keyframes ambientPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.08); }
+        }
+        .animate-ambient {
+            animation: ambientPulse 8s ease-in-out infinite;
+        }
+
+        /* Custom Sliders */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+            transition: all 0.2s;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.3);
+            background: #ec4899;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+        /* Fullscreen Player Slide Transition */
+        .player-modal {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+        .player-modal.hidden-modal {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative select-none antialiased">
+
+    <!-- Ambient Dynamic Background Glow -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div id="ambientGlow1" class="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-tr from-brandPink to-brandViolet rounded-full filter blur-[130px] opacity-35 animate-ambient"></div>
+        <div id="ambientGlow2" class="absolute top-1/2 -right-32 w-96 h-96 bg-gradient-to-br from-brandCyan to-brandViolet rounded-full filter blur-[140px] opacity-30 animate-ambient" style="animation-delay: -4s;"></div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="relative z-10 flex-1 flex flex-col max-w-6xl w-full mx-auto px-4 sm:px-6 pt-4 pb-32">
+
+        <!-- HEADER BAR -->
+        <header class="flex items-center justify-between py-3 mb-6 border-b border-white/10">
+            <!-- Flat iOS Style Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 squircle bg-gradient-to-tr from-brandPink via-brandViolet to-brandCyan flex items-center justify-center shadow-lg shadow-brandPink/30 relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <i class="fa-solid fa-music text-white text-xl transform -rotate-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
+                        Komusic
+                    </h1>
+                    <p id="trackStats" class="text-xs text-zinc-400 font-medium">Initializing library...</p>
+                </div>
+            </div>
+
+            <!-- Top Actions -->
+            <div class="flex items-center gap-2">
+                <!-- Search Input -->
+                <div class="relative hidden sm:block w-48 lg:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs"></i>
+                    <input type="text" id="searchInput" placeholder="Search tracks or artists..." class="w-full bg-white/5 border border-white/10 rounded-full pl-8 pr-4 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brandPink transition-colors">
+                </div>
+
+                <!-- EQ Button -->
+                <button id="eqToggleBtn" class="liquid-pill p-2.5 rounded-full text-zinc-300 hover:text-white transition-all hover:scale-105 active:scale-95" title="5-Band Equalizer">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                </button>
+
+                <!-- Import Local Audio Files -->
+                <div class="flex items-center gap-1.5">
+                    <label for="fileInput" class="cursor-pointer liquid-pill px-3.5 py-2 rounded-full text-xs font-bold text-white bg-gradient-to-r from-brandPink to-brandViolet flex items-center gap-2 shadow-lg shadow-brandPink/20 hover:brightness-110 active:scale-95 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Add Files</span>
+                    </label>
+                    <label for="folderInput" class="cursor-pointer liquid-pill p-2 sm:px-3 sm:py-2 rounded-full text-xs font-semibold text-zinc-300 hover:text-white flex items-center gap-1.5 border border-white/10 transition-all" title="Import Folder">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span class="hidden lg:inline">Open Folder</span>
+                    </label>
+                    <input type="file" id="fileInput" multiple accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" class="hidden">
+                    <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
+                </div>
+            </div>
+        </header>
+
+        <!-- Mobile Search Input -->
+        <div class="block sm:hidden mb-4">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs"></i>
+                <input type="text" id="searchInputMobile" placeholder="Search songs or artists..." class="w-full bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brandPink transition-colors">
+            </div>
+        </div>
+
+        <!-- MAIN LAYOUT GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+
+            <!-- LEFT: NOW PLAYING DESKTOP CARD (5 cols) -->
+            <section class="lg:col-span-5 flex flex-col items-center">
+                <div class="liquid-glass-card w-full rounded-3xl p-6 flex flex-col items-center text-center relative overflow-hidden">
+                    
+                    <!-- Visualizer Mode Toggle & Canvas -->
+                    <div class="w-full h-24 mb-2 relative flex flex-col items-center justify-center group">
+                        <canvas id="visualizerCanvas" class="w-full h-full rounded-xl cursor-pointer" title="Click to toggle Visualizer Style"></canvas>
+                        <span class="absolute bottom-1 right-2 text-[9px] font-mono text-zinc-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Click to Change Mode</span>
+                    </div>
+
+                    <!-- Album Vinyl Artwork -->
+                    <div class="relative my-4 cursor-pointer" id="albumArtContainer">
+                        <div id="vinylRecord" class="absolute inset-0 w-52 h-52 sm:w-60 sm:h-60 mx-auto rounded-full bg-zinc-950 border-4 border-zinc-800 shadow-2xl flex items-center justify-center transition-all duration-700 transform translate-x-0 animate-record-spin paused-spin pointer-events-none">
+                            <div class="w-20 h-20 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center">
+                                <div class="w-6 h-6 rounded-full bg-brandPink/60 border-2 border-zinc-950"></div>
+                            </div>
+                        </div>
+
+                        <div class="relative w-52 h-52 sm:w-60 sm:h-60 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-zinc-900 flex items-center justify-center z-10 group">
+                            <img id="nowPlayingArt" src="https://placehold.co/400x400/18181b/ec4899?text=Komusic" alt="Album Art" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <div id="openExpandedPlayerBtn" class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <i class="fa-solid fa-expand text-white text-3xl shadow-lg"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Song Info -->
+                    <div class="w-full mt-3 space-y-1">
+                        <div class="flex items-center justify-between px-2">
+                            <button id="favoriteBtn" class="text-zinc-500 hover:text-brandPink text-lg transition-colors" title="Favorite">
+                                <i class="fa-regular fa-heart"></i>
+                            </button>
+                            <div class="min-w-0 flex-1 px-3">
+                                <h2 id="nowPlayingTitle" class="text-base font-bold text-white truncate">No Song Playing</h2>
+                                <p id="nowPlayingArtist" class="text-xs text-zinc-400 truncate">Import local files or play lofi demo</p>
+                            </div>
+                            <button id="synthDemoBtn" class="text-zinc-500 hover:text-brandCyan text-sm transition-colors" title="Generate Lofi Synth Track">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hero Quick Seek & Controls -->
+                    <div class="w-full mt-5 space-y-2">
+                        <div class="space-y-1">
+                            <input type="range" id="heroProgressBar" min="0" max="100" value="0" class="w-full">
+                            <div class="flex justify-between text-[10px] font-mono text-zinc-400 font-medium">
+                                <span id="heroCurrentTime">0:00</span>
+                                <span id="heroDuration">0:00</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-center gap-5 pt-1">
+                            <button id="btnShuffle" class="text-zinc-500 hover:text-white text-sm transition-all" title="Shuffle">
+                                <i class="fa-solid fa-shuffle"></i>
+                            </button>
+                            <button id="btnPrev" class="text-zinc-300 hover:text-white text-lg transition-all active:scale-90">
+                                <i class="fa-solid fa-backward-step"></i>
+                            </button>
+                            <button id="btnHeroPlay" class="w-12 h-12 rounded-full bg-gradient-to-tr from-brandPink to-brandViolet text-white text-lg flex items-center justify-center shadow-lg shadow-brandPink/30 hover:scale-105 active:scale-95 transition-all">
+                                <i class="fa-solid fa-play ml-0.5"></i>
+                            </button>
+                            <button id="btnNext" class="text-zinc-300 hover:text-white text-lg transition-all active:scale-90">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+                            <button id="btnRepeat" class="text-zinc-500 hover:text-white text-sm transition-all" title="Repeat">
+                                <i class="fa-solid fa-repeat"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- RIGHT: TRACKLIST & PLAYLIST LIBRARY (7 cols) -->
+            <section class="lg:col-span-7 flex flex-col gap-4">
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 bg-white/5 p-1 rounded-full border border-white/10">
+                        <button data-tab="all" class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-brandPink text-white shadow-md transition-all">All Songs</button>
+                        <button data-tab="favorites" class="tab-btn px-4 py-1.5 rounded-full text-xs font-semibold text-zinc-400 hover:text-white transition-all">Favorites ❤️</button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <button id="loadDemoTracksBtn" class="text-xs text-brandCyan hover:underline font-semibold flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-music"></i> Add Demo Song
+                        </button>
+                        <button id="clearPlaylistBtn" class="text-xs text-zinc-500 hover:text-red-400 font-medium transition-colors">
+                            Clear Storage
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Track List Container -->
+                <div class="liquid-glass-card rounded-3xl p-3 sm:p-4 min-h-[420px] max-h-[500px] flex flex-col">
+                    
+                    <div class="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-4 py-2 border-b border-white/5">
+                        <span class="col-span-1 text-center">#</span>
+                        <span class="col-span-7 sm:col-span-6">Title</span>
+                        <span class="hidden sm:block sm:col-span-3">Artist</span>
+                        <span class="col-span-4 sm:col-span-2 text-right">Duration</span>
+                    </div>
+
+                    <!-- Tracks List Scroll -->
+                    <div id="trackListContainer" class="space-y-1 mt-2 custom-scrollbar overflow-y-auto flex-1 pr-1">
+                        <!-- Tracks populated dynamically -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyPlaylistState" class="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                        <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 mb-3">
+                            <i class="fa-solid fa-folder-open text-2xl"></i>
+                        </div>
+                        <h3 class="text-sm font-semibold text-zinc-300">No Audio Files Loaded</h3>
+                        <p class="text-xs text-zinc-500 mt-1 max-w-xs">Select local music files (.mp3, .flac, .wav, .m4a) or load a synthesized lofi demo track.</p>
+                        <div class="flex gap-2 mt-4">
+                            <label for="fileInput" class="cursor-pointer text-xs font-semibold px-4 py-2 rounded-full bg-brandPink hover:bg-brandPink/90 text-white shadow-lg transition-all">Import Files</label>
+                            <button id="emptyStateDemoBtn" class="text-xs font-semibold px-4 py-2 rounded-full border border-white/10 text-zinc-300 hover:text-white transition-all">Play Synth Demo</button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </div>
+
+    </div>
+
+    <!-- 5-BAND EQUALIZER MODAL -->
+    <div id="eqModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+        <div class="liquid-glass rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-6 relative border border-white/20">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-brandPink text-lg"></i>
+                    <h3 class="text-base font-bold text-white">5-Band Equalizer</h3>
+                </div>
+                <button id="closeEqBtn" class="text-zinc-400 hover:text-white text-lg transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Presets -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Presets</label>
+                <div class="grid grid-cols-5 gap-1.5">
+                    <button data-preset="flat" class="eq-preset-btn text-[11px] py-1.5 rounded-xl border border-white/10 bg-brandPink text-white font-semibold transition-all">Flat</button>
+                    <button data-preset="bass" class="eq-preset-btn text-[11px] py-1.5 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-all">Bass</button>
+                    <button data-preset="pop" class="eq-preset-btn text-[11px] py-1.5 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-all">Pop</button>
+                    <button data-preset="rock" class="eq-preset-btn text-[11px] py-1.5 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-all">Rock</button>
+                    <button data-preset="jazz" class="eq-preset-btn text-[11px] py-1.5 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-all">Jazz</button>
+                </div>
+            </div>
+
+            <!-- Sliders Grid -->
+            <div class="grid grid-cols-5 gap-2 pt-2 text-center">
+                <!-- 60Hz -->
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] text-zinc-400 font-mono" id="eqGain0">0dB</span>
+                    <input type="range" id="eqBand0" min="-12" max="12" value="0" step="1" class="h-28 -rotate-90 w-28 my-8">
+                    <span class="text-[10px] font-bold text-zinc-300">60Hz</span>
+                </div>
+                <!-- 230Hz -->
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] text-zinc-400 font-mono" id="eqGain1">0dB</span>
+                    <input type="range" id="eqBand1" min="-12" max="12" value="0" step="1" class="h-28 -rotate-90 w-28 my-8">
+                    <span class="text-[10px] font-bold text-zinc-300">230Hz</span>
+                </div>
+                <!-- 910Hz -->
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] text-zinc-400 font-mono" id="eqGain2">0dB</span>
+                    <input type="range" id="eqBand2" min="-12" max="12" value="0" step="1" class="h-28 -rotate-90 w-28 my-8">
+                    <span class="text-[10px] font-bold text-zinc-300">910Hz</span>
+                </div>
+                <!-- 4kHz -->
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] text-zinc-400 font-mono" id="eqGain3">0dB</span>
+                    <input type="range" id="eqBand3" min="-12" max="12" value="0" step="1" class="h-28 -rotate-90 w-28 my-8">
+                    <span class="text-[10px] font-bold text-zinc-300">4kHz</span>
+                </div>
+                <!-- 14kHz -->
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[10px] text-zinc-400 font-mono" id="eqGain4">0dB</span>
+                    <input type="range" id="eqBand4" min="-12" max="12" value="0" step="1" class="h-28 -rotate-90 w-28 my-8">
+                    <span class="text-[10px] font-bold text-zinc-300">14kHz</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN EXPANDED PLAYER MODAL -->
+    <div id="expandedPlayerModal" class="player-modal hidden-modal fixed inset-0 z-50 bg-zinc-950/95 backdrop-blur-2xl flex flex-col p-6 overflow-y-auto">
+        <div class="max-w-md w-full mx-auto flex-1 flex flex-col justify-between">
+            <!-- Header bar -->
+            <div class="flex items-center justify-between py-2">
+                <button id="closeExpandedBtn" class="text-zinc-400 hover:text-white text-xl p-2">
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+                <div class="text-center">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Playing From Library</span>
+                    <h4 id="expandedHeaderArtist" class="text-xs font-semibold text-zinc-300 truncate max-w-[200px]">Artist</h4>
+                </div>
+                <button id="expandedFavBtn" class="text-zinc-400 hover:text-brandPink text-xl p-2">
+                    <i class="fa-regular fa-heart"></i>
+                </button>
+            </div>
+
+            <!-- Big Album Art Cover -->
+            <div class="my-auto py-6 flex items-center justify-center">
+                <div class="w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative">
+                    <img id="expandedArt" src="https://placehold.co/400x400/18181b/ec4899?text=Komusic" alt="Cover" class="w-full h-full object-cover">
+                </div>
+            </div>
+
+            <!-- Song details and seek controls -->
+            <div class="space-y-6 pb-6">
+                <div>
+                    <h2 id="expandedTitle" class="text-xl font-bold text-white truncate text-center">Track Title</h2>
+                    <p id="expandedArtist" class="text-sm font-medium text-zinc-400 truncate text-center mt-1">Artist Name</p>
+                </div>
+
+                <div class="space-y-2">
+                    <input type="range" id="expandedProgressBar" min="0" max="100" value="0" class="w-full">
+                    <div class="flex justify-between text-xs font-mono text-zinc-400">
+                        <span id="expandedCurrentTime">0:00</span>
+                        <span id="expandedDuration">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Primary Player Controls -->
+                <div class="flex items-center justify-between px-4">
+                    <button id="expandedShuffleBtn" class="text-zinc-500 hover:text-white text-lg">
+                        <i class="fa-solid fa-shuffle"></i>
+                    </button>
+                    <button id="expandedPrevBtn" class="text-zinc-200 hover:text-white text-2xl active:scale-90">
+                        <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    <button id="expandedPlayBtn" class="w-16 h-16 rounded-full bg-gradient-to-tr from-brandPink to-brandViolet text-white text-2xl flex items-center justify-center shadow-xl shadow-brandPink/40 hover:scale-105 active:scale-95">
+                        <i class="fa-solid fa-play ml-1"></i>
+                    </button>
+                    <button id="expandedNextBtn" class="text-zinc-200 hover:text-white text-2xl active:scale-90">
+                        <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                    <button id="expandedRepeatBtn" class="text-zinc-500 hover:text-white text-lg">
+                        <i class="fa-solid fa-repeat"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- FLOATING LIQUID GLASS BOTTOM PLAYER BAR -->
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 max-w-4xl w-[92%] sm:w-[88%] z-40">
+        <div class="liquid-glass rounded-full p-2.5 sm:p-3 flex items-center justify-between gap-3 shadow-2xl relative overflow-hidden border border-white/20">
+            
+            <!-- Mini Song Preview Info (Clicking toggles full expanded view) -->
+            <div class="flex items-center gap-3 min-w-0 flex-1 pl-1 cursor-pointer" id="miniPlayerInfo">
+                <div class="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-white/20 flex-shrink-0 bg-zinc-900">
+                    <img id="dockMiniArt" src="https://placehold.co/100x100/18181b/ec4899?text=Komusic" alt="Cover" class="w-full h-full object-cover">
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h4 id="dockMiniTitle" class="text-xs sm:text-sm font-bold text-white truncate">No Song Playing</h4>
+                    <p id="dockMiniArtist" class="text-[11px] text-zinc-400 truncate">Tap to expand player</p>
+                </div>
+            </div>
+
+            <!-- Mini Controls Dock -->
+            <div class="flex items-center gap-2 sm:gap-4 pr-1">
+                <button id="dockBtnPrev" class="text-zinc-300 hover:text-white p-2 transition-all active:scale-90 hidden sm:block">
+                    <i class="fa-solid fa-backward-step text-sm"></i>
+                </button>
+
+                <button id="dockBtnPlay" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-brandPink to-brandViolet text-white flex items-center justify-center shadow-lg shadow-brandPink/30 hover:scale-105 active:scale-95 transition-all">
+                    <i class="fa-solid fa-play ml-0.5 text-sm"></i>
+                </button>
+
+                <button id="dockBtnNext" class="text-zinc-300 hover:text-white p-2 transition-all active:scale-90">
+                    <i class="fa-solid fa-forward-step text-sm"></i>
+                </button>
+
+                <div class="relative group hidden md:flex items-center gap-2 pl-2 border-l border-white/10">
+                    <button id="muteBtn" class="text-zinc-400 hover:text-white text-xs">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.8" class="w-20">
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT AUDIO ENGINE & STORAGE CONTROLLER -->
+    <script>
+        // --- INDEXED DB ENGINE ---
+        const DB_NAME = 'KomusicDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'audio_tracks';
+        let db;
+
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        const saveTrackToDB = (trackData, blob) => {
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put({ ...trackData, blob });
+                tx.oncomplete = () => resolve();
+                tx.onerror = (err) => reject(err);
+            });
+        };
+
+        const getAllTracksFromDB = () => {
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve([]);
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = (err) => reject(err);
+            });
+        };
+
+        const deleteTrackFromDB = (id) => {
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (err) => reject(err);
+            });
+        };
+
+        const clearAllDB = () => {
+            return new Promise((resolve, reject) => {
+                if (!db) return resolve();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = (err) => reject(err);
+            });
+        };
+
+        // --- APP STATE ---
+        const state = {
+            playlist: [], // Array of tracks: { id, title, artist, album, duration, url, blob }
+            currentIndex: -1,
+            isPlaying: false,
+            favorites: JSON.parse(localStorage.getItem('lm_favorites')) || [],
+            repeatMode: 'off', 
+            isShuffle: false,
+            currentTab: 'all',
+            searchQuery: '',
+            eqGains: JSON.parse(localStorage.getItem('lm_eq_gains')) || [0, 0, 0, 0, 0],
+            visualizerMode: 'bars' // 'bars' or 'wave'
+        };
+
+        // --- AUDIO ENGINE ---
+        let audioCtx, audioSource, analyser, gainNode;
+        const eqFilters = [];
+        const audioElement = new Audio();
+        audioElement.crossOrigin = "anonymous";
+
+        const initAudioEngine = () => {
+            if (audioCtx) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 128;
+
+                gainNode = audioCtx.createGain();
+
+                const frequencies = [60, 230, 910, 4000, 14000];
+                let previousNode = audioCtx.createMediaElementSource(audioElement);
+                audioSource = previousNode;
+
+                frequencies.forEach((freq, idx) => {
+                    const filter = audioCtx.createBiquadFilter();
+                    if (idx === 0) filter.type = 'lowshelf';
+                    else if (idx === frequencies.length - 1) filter.type = 'highshelf';
+                    else filter.type = 'peaking';
+
+                    filter.frequency.value = freq;
+                    filter.gain.value = state.eqGains[idx];
+
+                    previousNode.connect(filter);
+                    previousNode = filter;
+                    eqFilters.push(filter);
+                });
+
+                previousNode.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            } catch (e) {
+                console.warn("Web Audio API setup error:", e);
+            }
+        };
+
+        // --- SYNTHESIZED LOFI DEMO AUDIO GENERATOR ---
+        const generateSynthDemoBlob = () => {
+            const sampleRate = 44100;
+            const duration = 16; // 16 seconds loopable synth audio
+            const numSamples = sampleRate * duration;
+            const ctx = new OfflineAudioContext(2, numSamples, sampleRate);
+
+            // Synth chords & beat notes
+            const notes = [261.63, 329.63, 392.00, 523.25, 349.23, 440.00]; // C4, E4, G4, C5, F4, A4
+            
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, 0);
+
+                // LFO Filter modulation for warm lofi feel
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(800 + i * 200, 0);
+
+                gain.gain.setValueAtTime(0.05, i * 2.5);
+                gain.gain.exponentialRampToValueAtTime(0.001, (i * 2.5) + 3.5);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(i * 2.5);
+                osc.stop((i * 2.5) + 4);
+            });
+
+            return ctx.startRendering().then(renderedBuffer => {
+                // Convert AudioBuffer to WAV Blob
+                return bufferToWavBlob(renderedBuffer);
+            });
+        };
+
+        // AudioBuffer to WAV Blob helper
+        function bufferToWavBlob(buffer) {
+            const numOfChan = buffer.numberOfChannels,
+                length = buffer.length * numOfChan * 2 + 44,
+                out = new DataView(new ArrayBuffer(length)),
+                channels = [];
+            let sample, offset = 0, pos = 0;
+
+            function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
+            function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+
+            setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+            setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+            setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+            setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+
+            for (let i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
+
+            while (offset < buffer.length) {
+                for (let i = 0; i < numOfChan; i++) {
+                    sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                    out.setInt16(pos, sample, true); pos += 2;
+                }
+                offset++;
+            }
+            return new Blob([out.buffer], { type: 'audio/wav' });
+        }
+
+        // --- FILE PARSER & PERSISTENCE LOAD ---
+        const parseAndStoreFiles = async (files) => {
+            for (const file of Array.from(files)) {
+                if (!file.type.startsWith('audio/') && !/\.(mp3|wav|ogg|flac|m4a|aac)$/i.test(file.name)) continue;
+
+                let title = file.name.replace(/\.[^/.]+$/, "");
+                let artist = "Local Artist";
+                if (title.includes(" - ")) {
+                    const parts = title.split(" - ");
+                    artist = parts[0].trim();
+                    title = parts.slice(1).join(" - ").trim();
+                }
+
+                const trackId = 'tr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                const trackData = {
+                    id: trackId,
+                    title: title,
+                    artist: artist,
+                    album: "Local Storage",
+                    duration: 0
+                };
+
+                await saveTrackToDB(trackData, file);
+                const blobUrl = URL.createObjectURL(file);
+                state.playlist.push({ ...trackData, blob: file, url: blobUrl });
+            }
+
+            updateStats();
+            renderTracklist();
+            if (state.currentIndex === -1 && state.playlist.length > 0) {
+                loadTrack(0, false);
+            }
+        };
+
+        const loadSavedLibrary = async () => {
+            await initDB();
+            const storedTracks = await getAllTracksFromDB();
+
+            if (storedTracks && storedTracks.length > 0) {
+                state.playlist = storedTracks.map(t => ({
+                    ...t,
+                    url: URL.createObjectURL(t.blob)
+                }));
+                updateStats();
+                renderTracklist();
+                loadTrack(0, false);
+            } else {
+                updateStats();
+                renderTracklist();
+            }
+        };
+
+        const generateAndAddDemoTrack = async () => {
+            const blob = await generateSynthDemoBlob();
+            const trackId = 'demo_' + Date.now();
+            const trackData = {
+                id: trackId,
+                title: "Lofi Synth Chill",
+                artist: "Liquid Synth Engine",
+                album: "Demo Synthesizer",
+                duration: 16
+            };
+            await saveTrackToDB(trackData, blob);
+            const url = URL.createObjectURL(blob);
+            state.playlist.push({ ...trackData, blob, url });
+            updateStats();
+            renderTracklist();
+            if (state.currentIndex === -1) loadTrack(state.playlist.length - 1, true);
+        };
+
+        // --- PLAYBACK CONTROLS ---
+        const loadTrack = (index, shouldPlay = true) => {
+            if (index < 0 || index >= state.playlist.length) return;
+            state.currentIndex = index;
+            const track = state.playlist[index];
+
+            audioElement.src = track.url;
+            audioElement.load();
+
+            // Update UI Title & Artwork
+            document.getElementById('nowPlayingTitle').textContent = track.title;
+            document.getElementById('nowPlayingArtist').textContent = track.artist;
+            document.getElementById('dockMiniTitle').textContent = track.title;
+            document.getElementById('dockMiniArtist').textContent = track.artist;
+            document.getElementById('expandedTitle').textContent = track.title;
+            document.getElementById('expandedArtist').textContent = track.artist;
+            document.getElementById('expandedHeaderArtist').textContent = track.artist;
+
+            const isFav = state.favorites.includes(track.id);
+            const favClass = isFav ? "fa-solid fa-heart text-brandPink" : "fa-regular fa-heart";
+            document.getElementById('favoriteBtn').querySelector('i').className = favClass;
+            document.getElementById('expandedFavBtn').querySelector('i').className = favClass;
+
+            renderTracklist();
+
+            if (shouldPlay) {
+                playTrack();
+            }
+
+            // Lock Screen Controls Setup
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: track.title,
+                    artist: track.artist,
+                    album: track.album || 'Local Music',
+                    artwork: [{ src: 'https://placehold.co/512x512/18181b/ec4899?text=Komusic', sizes: '512x512', type: 'image/png' }]
+                });
+            }
+        };
+
+        const playTrack = () => {
+            initAudioEngine();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            audioElement.play().then(() => {
+                state.isPlaying = true;
+                updatePlayButtons(true);
+                document.getElementById('vinylRecord').classList.remove('paused-spin');
+            }).catch(err => console.error("Play error:", err));
+        };
+
+        const pauseTrack = () => {
+            audioElement.pause();
+            state.isPlaying = false;
+            updatePlayButtons(false);
+            document.getElementById('vinylRecord').classList.add('paused-spin');
+        };
+
+        const togglePlay = () => {
+            if (state.playlist.length === 0) return;
+            if (state.currentIndex === -1) state.currentIndex = 0;
+
+            if (state.isPlaying) pauseTrack();
+            else playTrack();
+        };
+
+        const nextTrack = () => {
+            if (state.playlist.length === 0) return;
+            if (state.isShuffle) {
+                const rand = Math.floor(Math.random() * state.playlist.length);
+                loadTrack(rand, true);
+                return;
+            }
+            let nextIdx = state.currentIndex + 1;
+            if (nextIdx >= state.playlist.length) nextIdx = 0;
+            loadTrack(nextIdx, true);
+        };
+
+        const prevTrack = () => {
+            if (state.playlist.length === 0) return;
+            let prevIdx = state.currentIndex - 1;
+            if (prevIdx < 0) prevIdx = state.playlist.length - 1;
+            loadTrack(prevIdx, true);
+        };
+
+        const updatePlayButtons = (isPlaying) => {
+            const icon = `<i class="fa-solid fa-${isPlaying ? 'pause' : 'play'}"></i>`;
+            document.getElementById('btnHeroPlay').innerHTML = icon;
+            document.getElementById('dockBtnPlay').innerHTML = icon;
+            document.getElementById('expandedPlayBtn').innerHTML = icon;
+        };
+
+        const formatTime = (secs) => {
+            if (isNaN(secs)) return "0:00";
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        };
+
+        // --- TRACKLIST RENDERER ---
+        const renderTracklist = () => {
+            const container = document.getElementById('trackListContainer');
+            const emptyState = document.getElementById('emptyPlaylistState');
+
+            let filtered = state.playlist.filter((t) => {
+                const matches = t.title.toLowerCase().includes(state.searchQuery.toLowerCase()) || 
+                                t.artist.toLowerCase().includes(state.searchQuery.toLowerCase());
+                if (!matches) return false;
+                if (state.currentTab === 'favorites') return state.favorites.includes(t.id);
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = filtered.map((t, idx) => {
+                const isCurrent = state.playlist[state.currentIndex]?.id === t.id;
+                const isFav = state.favorites.includes(t.id);
+
+                return `
+                    <div onclick="loadTrack(${state.playlist.indexOf(t)}, true)" class="group grid grid-cols-12 items-center text-xs p-2.5 rounded-2xl transition-all cursor-pointer ${isCurrent ? 'bg-brandPink/20 text-white font-semibold border border-brandPink/30 shadow-md' : 'hover:bg-white/5 text-zinc-300'}">
+                        <div class="col-span-1 text-center font-mono text-zinc-500 flex items-center justify-center">
+                            ${isCurrent && state.isPlaying ? '<i class="fa-solid fa-volume-high text-brandPink animate-pulse"></i>' : (idx + 1)}
+                        </div>
+                        <div class="col-span-7 sm:col-span-6 min-w-0 pr-2">
+                            <p class="truncate font-medium text-white">${escapeHtml(t.title)}</p>
+                            <p class="truncate text-[11px] text-zinc-400 sm:hidden">${escapeHtml(t.artist)}</p>
+                        </div>
+                        <div class="hidden sm:block sm:col-span-3 truncate text-zinc-400 text-[11px]">
+                            ${escapeHtml(t.artist)}
+                        </div>
+                        <div class="col-span-4 sm:col-span-2 flex items-center justify-end gap-3 text-right">
+                            <button onclick="event.stopPropagation(); toggleFavorite('${t.id}')" class="text-zinc-500 hover:text-brandPink transition-colors">
+                                <i class="${isFav ? 'fa-solid fa-heart text-brandPink' : 'fa-regular fa-heart'}"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); removeTrack('${t.id}')" class="text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        const toggleFavorite = (id) => {
+            if (state.favorites.includes(id)) {
+                state.favorites = state.favorites.filter(f => f !== id);
+            } else {
+                state.favorites.push(id);
+            }
+            localStorage.setItem('lm_favorites', JSON.stringify(state.favorites));
+            
+            if (state.playlist[state.currentIndex]?.id === id) {
+                const isFav = state.favorites.includes(id);
+                const favClass = isFav ? "fa-solid fa-heart text-brandPink" : "fa-regular fa-heart";
+                document.getElementById('favoriteBtn').querySelector('i').className = favClass;
+                document.getElementById('expandedFavBtn').querySelector('i').className = favClass;
+            }
+            renderTracklist();
+        };
+
+        const removeTrack = async (id) => {
+            const index = state.playlist.findIndex(t => t.id === id);
+            if (index !== -1) {
+                await deleteTrackFromDB(id);
+                state.playlist.splice(index, 1);
+                if (state.currentIndex === index) {
+                    if (state.playlist.length > 0) loadTrack(0, state.isPlaying);
+                    else {
+                        audioElement.pause();
+                        state.currentIndex = -1;
+                        state.isPlaying = false;
+                        updatePlayButtons(false);
+                    }
+                } else if (state.currentIndex > index) {
+                    state.currentIndex--;
+                }
+                updateStats();
+                renderTracklist();
+            }
+        };
+
+        const updateStats = () => {
+            document.getElementById('trackStats').textContent = `${state.playlist.length} track${state.playlist.length === 1 ? '' : 's'} in local library`;
+        };
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // --- DUAL-MODE CANVAS VISUALIZER ---
+        const setupVisualizer = () => {
+            const canvas = document.getElementById('visualizerCanvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.addEventListener('click', () => {
+                state.visualizerMode = state.visualizerMode === 'bars' ? 'wave' : 'bars';
+            });
+
+            const render = () => {
+                requestAnimationFrame(render);
+                const width = canvas.width = canvas.parentElement.clientWidth;
+                const height = canvas.height = canvas.parentElement.clientHeight;
+
+                ctx.clearRect(0, 0, width, height);
+
+                if (!analyser || !state.isPlaying) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, height / 2);
+                    ctx.lineTo(width, height / 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    return;
+                }
+
+                if (state.visualizerMode === 'bars') {
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    const barWidth = (width / bufferLength) * 2.2;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i++) {
+                        const barHeight = (dataArray[i] / 255) * height;
+                        const grad = ctx.createLinearGradient(0, height, 0, 0);
+                        grad.addColorStop(0, '#ec4899');
+                        grad.addColorStop(1, '#8b5cf6');
+
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(x, height - barHeight, barWidth - 2, barHeight);
+                        x += barWidth;
+                    }
+                } else {
+                    const bufferLength = analyser.fftSize;
+                    const dataArray = new Uint8Array(bufferLength);
+                    analyser.getByteTimeDomainData(dataArray);
+
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#ec4899';
+                    ctx.beginPath();
+
+                    const sliceWidth = width / bufferLength;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = dataArray[i] / 128.0;
+                        const y = (v * height) / 2;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                        x += sliceWidth;
+                    }
+                    ctx.lineTo(width, height / 2);
+                    ctx.stroke();
+                }
+            };
+            render();
+        };
+
+        // --- EVENT BINDINGS ---
+        const initEventListeners = () => {
+            // Audio Progress update
+            audioElement.addEventListener('timeupdate', () => {
+                const cur = audioElement.currentTime;
+                const dur = audioElement.duration || 0;
+                const pct = dur > 0 ? (cur / dur) * 100 : 0;
+
+                document.getElementById('heroProgressBar').value = pct;
+                document.getElementById('expandedProgressBar').value = pct;
+                document.getElementById('heroCurrentTime').textContent = formatTime(cur);
+                document.getElementById('heroDuration').textContent = formatTime(dur);
+                document.getElementById('expandedCurrentTime').textContent = formatTime(cur);
+                document.getElementById('expandedDuration').textContent = formatTime(dur);
+            });
+
+            audioElement.addEventListener('ended', () => {
+                if (state.repeatMode === 'one') {
+                    audioElement.currentTime = 0;
+                    playTrack();
+                } else {
+                    nextTrack();
+                }
+            });
+
+            // Seek Sliders
+            const handleSeek = (e) => {
+                const dur = audioElement.duration;
+                if (dur) audioElement.currentTime = (e.target.value / 100) * dur;
+            };
+            document.getElementById('heroProgressBar').addEventListener('input', handleSeek);
+            document.getElementById('expandedProgressBar').addEventListener('input', handleSeek);
+
+            // Volume Controls
+            document.getElementById('volumeSlider').addEventListener('input', (e) => audioElement.volume = e.target.value);
+            document.getElementById('muteBtn').addEventListener('click', () => {
+                audioElement.muted = !audioElement.muted;
+                document.getElementById('muteBtn').querySelector('i').className = audioElement.muted ? "fa-solid fa-volume-xmark text-red-400" : "fa-solid fa-volume-high";
+            });
+
+            // Playback Toggles
+            ['btnHeroPlay', 'dockBtnPlay', 'expandedPlayBtn'].forEach(id => document.getElementById(id).addEventListener('click', togglePlay));
+            ['btnNext', 'dockBtnNext', 'expandedNextBtn'].forEach(id => document.getElementById(id).addEventListener('click', nextTrack));
+            ['btnPrev', 'dockBtnPrev', 'expandedPrevBtn'].forEach(id => document.getElementById(id).addEventListener('click', prevTrack));
+
+            // Favorite buttons
+            ['favoriteBtn', 'expandedFavBtn'].forEach(id => {
+                document.getElementById(id).addEventListener('click', () => {
+                    const curTrack = state.playlist[state.currentIndex];
+                    if (curTrack) toggleFavorite(curTrack.id);
+                });
+            });
+
+            // Demo synth generator triggers
+            document.getElementById('synthDemoBtn').addEventListener('click', generateAndAddDemoTrack);
+            document.getElementById('loadDemoTracksBtn').addEventListener('click', generateAndAddDemoTrack);
+            document.getElementById('emptyStateDemoBtn').addEventListener('click', generateAndAddDemoTrack);
+
+            // File inputs
+            document.getElementById('fileInput').addEventListener('change', (e) => parseAndStoreFiles(e.target.files));
+            document.getElementById('folderInput').addEventListener('change', (e) => parseAndStoreFiles(e.target.files));
+
+            // Expanded view toggle
+            const expandedModal = document.getElementById('expandedPlayerModal');
+            document.getElementById('miniPlayerInfo').addEventListener('click', () => expandedModal.classList.remove('hidden-modal'));
+            document.getElementById('openExpandedPlayerBtn').addEventListener('click', () => expandedModal.classList.remove('hidden-modal'));
+            document.getElementById('closeExpandedBtn').addEventListener('click', () => expandedModal.classList.add('hidden-modal'));
+
+            // Clear storage
+            document.getElementById('clearPlaylistBtn').addEventListener('click', async () => {
+                await clearAllDB();
+                audioElement.pause();
+                state.playlist = [];
+                state.currentIndex = -1;
+                state.isPlaying = false;
+                updatePlayButtons(false);
+                updateStats();
+                renderTracklist();
+            });
+
+            // Repeat & Shuffle Modes
+            document.getElementById('btnShuffle').addEventListener('click', () => {
+                state.isShuffle = !state.isShuffle;
+                document.getElementById('btnShuffle').className = state.isShuffle ? "text-brandPink text-sm transition-all" : "text-zinc-500 hover:text-white text-sm transition-all";
+                document.getElementById('expandedShuffleBtn').className = state.isShuffle ? "text-brandPink text-lg" : "text-zinc-500 hover:text-white text-lg";
+            });
+
+            document.getElementById('btnRepeat').addEventListener('click', () => {
+                state.repeatMode = state.repeatMode === 'off' ? 'all' : (state.repeatMode === 'all' ? 'one' : 'off');
+                const isOne = state.repeatMode === 'one';
+                const isAll = state.repeatMode === 'all';
+                document.getElementById('btnRepeat').className = isAll || isOne ? "text-brandPink text-sm transition-all" : "text-zinc-500 hover:text-white text-sm transition-all";
+                document.getElementById('expandedRepeatBtn').className = isAll || isOne ? "text-brandPink text-lg" : "text-zinc-500 hover:text-white text-lg";
+            });
+
+            // Search Handlers
+            const onSearch = (e) => {
+                state.searchQuery = e.target.value;
+                renderTracklist();
+            };
+            document.getElementById('searchInput').addEventListener('input', onSearch);
+            document.getElementById('searchInputMobile').addEventListener('input', onSearch);
+
+            // Filter Tab Buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn px-4 py-1.5 rounded-full text-xs font-semibold text-zinc-400 hover:text-white transition-all");
+                    e.target.className = "tab-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-brandPink text-white shadow-md transition-all";
+                    state.currentTab = e.target.getAttribute('data-tab');
+                    renderTracklist();
+                });
+            });
+
+            // EQ Modal & Presets
+            const eqModal = document.getElementById('eqModal');
+            document.getElementById('eqToggleBtn').addEventListener('click', () => eqModal.classList.remove('hidden'));
+            document.getElementById('closeEqBtn').addEventListener('click', () => eqModal.classList.add('hidden'));
+
+            [0, 1, 2, 3, 4].forEach(idx => {
+                document.getElementById(`eqBand${idx}`).addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    state.eqGains[idx] = val;
+                    document.getElementById(`eqGain${idx}`).textContent = `${val > 0 ? '+' : ''}${val}dB`;
+                    if (eqFilters[idx]) eqFilters[idx].gain.value = val;
+                    localStorage.setItem('lm_eq_gains', JSON.stringify(state.eqGains));
+                });
+            });
+
+            const presets = {
+                flat: [0, 0, 0, 0, 0],
+                bass: [8, 5, 0, -2, -4],
+                pop: [-1, 2, 5, 3, -1],
+                rock: [5, 3, -1, 3, 5],
+                jazz: [3, 2, 1, 2, 4]
+            };
+            document.querySelectorAll('.eq-preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const p = e.target.getAttribute('data-preset');
+                    if (presets[p]) {
+                        state.eqGains = [...presets[p]];
+                        state.eqGains.forEach((g, idx) => {
+                            document.getElementById(`eqBand${idx}`).value = g;
+                            document.getElementById(`eqGain${idx}`).textContent = `${g > 0 ? '+' : ''}${g}dB`;
+                            if (eqFilters[idx]) eqFilters[idx].gain.value = g;
+                        });
+                        localStorage.setItem('lm_eq_gains', JSON.stringify(state.eqGains));
+                    }
+                });
+            });
+
+            // Media Session Handlers
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.setActionHandler('play', playTrack);
+                navigator.mediaSession.setActionHandler('pause', pauseTrack);
+                navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
+                navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+            }
+        };
+
+        // --- PWA SERVICE WORKER SETUP ---
+        const setupPWA = () => {
+            const manifest = {
+                name: "LiquidMusic PWA",
+                short_name: "LiquidMusic",
+                start_url: ".",
+                display: "standalone",
+                background_color: "#09090b",
+                theme_color: "#ec4899",
+                icons: [
+                    { src: "https://placehold.co/192x192/ec4899/white?text=Music", sizes: "192x192", type: "image/png" },
+                    { src: "https://placehold.co/512x512/ec4899/white?text=Music", sizes: "512x512", type: "image/png" }
+                ]
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = URL.createObjectURL(manifestBlob);
+            document.head.appendChild(link);
+
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    self.addEventListener('install', (e) => self.skipWaiting());
+                    self.addEventListener('activate', (e) => self.clients.claim());
+                    self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+                `;
+                const swBlob = new Blob([swCode], { type: 'text/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+            }
+
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                const pwaBtn = document.getElementById('pwaInstallBtn');
+                pwaBtn.classList.remove('hidden');
+                pwaBtn.addEventListener('click', () => {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => pwaBtn.classList.add('hidden'));
+                });
+            });
+        };
+
+        // --- INIT ---
+        window.addEventListener('load', async () => {
+            initEventListeners();
+            setupVisualizer();
+            await loadSavedLibrary();
+        });
+    </script>
+</body>
+</html>
