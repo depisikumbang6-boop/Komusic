@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pitih - Dompet Digital Indonesia</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pitih: {
+                            50: '#faf5ff',
+                            100: '#f3e8ff',
+                            500: '#a855f7',
+                            600: '#9333ea',
+                            700: '#7e22ce',
+                            900: '#581c87'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #090d16;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .phone-container {
+            max-width: 430px;
+            height: 100vh;
+            max-height: 932px;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+        @media (min-width: 640px) {
+            .phone-container {
+                height: 88vh;
+                border-radius: 48px;
+                border: 12px solid #1e293b;
+            }
+        }
+        /* iOS 26 Liquid Glass Effects */
+        .liquid-glass {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+        .dark .liquid-glass {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        .liquid-glass-card {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.85) 0%, rgba(126, 34, 206, 0.95) 100%);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 25px 50px rgba(126, 34, 206, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="h-full flex items-center justify-center sm:py-6">
+
+    <!-- App Wrapper -->
+    <div id="app" class="phone-container w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative overflow-hidden flex flex-col transition-colors duration-300">
+
+        <!-- NOTIFICATION TOAST -->
+        <div id="toast" class="absolute top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4">
+            <div id="toast-content" class="liquid-glass px-5 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm font-semibold text-slate-900 dark:text-white border border-white/40 dark:border-white/10">
+                <i id="toast-icon" class="fa-solid fa-circle-check text-purple-600 dark:text-purple-400 text-lg"></i>
+                <span id="toast-msg">Berhasil!</span>
+            </div>
+        </div>
+
+        <!-- 1. SPLASH SCREEN -->
+        <section id="screen-splash" class="absolute inset-0 bg-gradient-to-br from-purple-700 via-purple-800 to-slate-950 z-45 flex flex-col items-center justify-between p-8 text-white transition-opacity duration-700">
+            <div class="mt-28 flex flex-col items-center">
+                <!-- Solid Purple Logo with White 'PT' text -->
+                <div class="w-24 h-24 bg-purple-900 rounded-[32px] flex items-center justify-center mb-6 shadow-2xl border border-purple-400/40 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-white/10 backdrop-blur-md"></div>
+                    <span class="text-white font-black text-4xl tracking-wider relative z-10">PT</span>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight">Pitih</h1>
+                <p class="text-purple-200 text-xs mt-1 font-semibold uppercase tracking-wider">uangmu untuk masa depan</p>
+            </div>
+            <div class="w-full flex flex-col items-center mb-8">
+                <div class="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="text-xs text-purple-200 opacity-80">iOS 26 Liquid Glass Experience</p>
+            </div>
+        </section>
+
+        <!-- 2. LOGIN / AUTH PIN SCREEN -->
+        <section id="screen-auth" class="absolute inset-0 bg-slate-50 dark:bg-slate-950 z-40 flex flex-col justify-between p-6 hidden">
+            <div class="mt-12 text-center">
+                <div class="w-16 h-16 liquid-glass rounded-2xl mx-auto flex items-center justify-center text-purple-600 dark:text-purple-400 text-2xl font-bold mb-4 shadow-sm">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Masukkan PIN Pitih</h2>
+                <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">uangmu untuk masa depan</p>
+                
+                <!-- PIN Dots -->
+                <div class="flex justify-center space-x-3 my-10">
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-700 pin-dot transition-all duration-200"></div>
+                </div>
+            </div>
+
+            <!-- Numpad -->
+            <div class="grid grid-cols-3 gap-3 mb-6 px-4">
+                <button onclick="pressPin('1')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">1</button>
+                <button onclick="pressPin('2')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">2</button>
+                <button onclick="pressPin('3')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">3</button>
+                <button onclick="pressPin('4')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">4</button>
+                <button onclick="pressPin('5')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">5</button>
+                <button onclick="pressPin('6')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">6</button>
+                <button onclick="pressPin('7')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">7</button>
+                <button onclick="pressPin('8')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">8</button>
+                <button onclick="pressPin('9')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">9</button>
+                <button onclick="resetPin()" class="h-16 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition flex items-center justify-center">Reset</button>
+                <button onclick="pressPin('0')" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-xl font-bold text-slate-700 dark:text-slate-200 transition flex items-center justify-center shadow-sm">0</button>
+                <button onclick="deletePin()" class="h-16 liquid-glass hover:bg-white/80 dark:hover:bg-slate-800/80 active:scale-95 rounded-2xl text-lg text-slate-600 dark:text-slate-200 transition flex items-center justify-center shadow-sm"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+            <div class="text-center pb-2">
+                <p class="text-xs text-slate-400">PIN Demo: <span class="font-bold text-purple-600 dark:text-purple-400">123456</span></p>
+            </div>
+        </section>
+
+        <!-- 3. MAIN APP VIEW CONTAINER -->
+        <main id="main-content" class="flex-1 overflow-y-auto hide-scrollbar pb-32 relative hidden">
+
+            <!-- HOME TAB -->
+            <div id="tab-home" class="page-tab">
+                <!-- Header / Balance Card Area -->
+                <div class="bg-gradient-to-b from-purple-800 via-purple-700 to-purple-900 px-5 pt-6 pb-10 text-white rounded-b-[40px] shadow-2xl relative overflow-hidden">
+                    <!-- Glass highlight aura -->
+                    <div class="absolute -top-20 -right-20 w-60 h-60 bg-purple-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <!-- Top Bar with PT Logo -->
+                    <div class="flex items-center justify-between mb-5 relative z-10">
+                        <div class="flex items-center space-x-3">
+                            <div onclick="switchTab('profile')" class="w-11 h-11 bg-purple-950 rounded-2xl flex items-center justify-center font-black text-sm text-white border border-purple-400/40 cursor-pointer overflow-hidden shadow-lg">
+                                <span>PT</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-1.5">
+                                    <h4 class="font-bold text-sm" id="user-display-name">Lionel Messi</h4>
+                                    <span class="bg-amber-400 text-slate-900 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full shadow">VIP</span>
+                                </div>
+                                <p class="text-xs text-purple-200">082276648907</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="showToast('Tidak ada notifikasi baru', 'info')" class="w-10 h-10 liquid-glass rounded-full flex items-center justify-center text-white hover:bg-white/20 transition relative border border-white/20">
+                                <i class="fa-regular fa-bell text-lg"></i>
+                                <span class="absolute top-2 right-2 w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Wallet Balance Card (Liquid Glass Card) -->
+                    <div class="liquid-glass-card rounded-3xl p-5 shadow-2xl relative z-10 text-white">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold text-purple-100 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-wallet text-amber-300"></i>
+                                <span>Saldo Pitih</span>
+                            </span>
+                            <button onclick="toggleBalance()" class="text-xs text-purple-200 hover:text-white flex items-center space-x-1 bg-white/10 px-2.5 py-1 rounded-full backdrop-blur-md">
+                                <i id="eye-icon" class="fa-regular fa-eye"></i>
+                                <span id="eye-text">Sembunyikan</span>
+                            </button>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-2">
+                            <h2 id="balance-display" class="text-2xl font-extrabold tracking-tight">Rp 14.850.000</h2>
+                            <button onclick="openModal('topup')" class="bg-white text-purple-700 hover:bg-purple-50 text-xs font-bold px-4 py-2 rounded-xl shadow-lg transition transform active:scale-95">
+                                <i class="fa-solid fa-plus mr-1"></i> Top Up
+                            </button>
+                        </div>
+                        <!-- Coins & Tagline Row -->
+                        <div class="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-1.5">
+                                <i class="fa-solid fa-coins text-amber-300"></i>
+                                <span class="font-semibold">Points: <strong class="text-amber-300">45.200</strong></span>
+                            </div>
+                            <span class="text-[10px] text-purple-200 font-medium italic">uangmu untuk masa depan</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Action Grid (Floating Liquid Glass) -->
+                <div class="px-5 -mt-7 relative z-20">
+                    <div class="liquid-glass rounded-3xl p-4 shadow-2xl grid grid-cols-4 gap-3 text-center border border-white/50 dark:border-white/10">
+                        <button onclick="openModal('topup')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1.5 transition shadow-sm">
+                                <i class="fa-solid fa-wallet"></i>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Top Up</span>
+                        </button>
+                        <button onclick="openModal('send')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1.5 transition shadow-sm">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Kirim</span>
+                        </button>
+                        <button onclick="switchTab('scan')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1.5 transition shadow-sm">
+                                <i class="fa-solid fa-qrcode"></i>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">QR Bayar</span>
+                        </button>
+                        <button onclick="switchTab('history')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1.5 transition shadow-sm">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">Riwayat</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Promo Banner Carousel -->
+                <div class="px-5 mt-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Promo & Penawaran Spesial</h3>
+                        <span class="text-xs font-semibold text-purple-600 dark:text-purple-400 cursor-pointer" onclick="showToast('Semua promo ditampilkan', 'info')">Lihat Semua</span>
+                    </div>
+                    <div class="flex space-x-3 overflow-x-auto hide-scrollbar pb-2">
+                        <div class="min-w-[280px] liquid-glass-card rounded-3xl p-4 text-white shadow-xl flex-shrink-0 relative overflow-hidden">
+                            <span class="bg-white/20 text-[10px] font-bold px-2.5 py-0.5 rounded-full">MASA DEPAN CERAH</span>
+                            <h4 class="font-bold text-base mt-2">Investasi Emas & Reksa Dana</h4>
+                            <p class="text-xs text-purple-100 mt-1">Mulai dari Rp 10.000 untuk masa depan Anda.</p>
+                        </div>
+                        <div class="min-w-[280px] liquid-glass rounded-3xl p-4 text-slate-900 dark:text-white shadow-xl flex-shrink-0 relative overflow-hidden border border-white/40">
+                            <span class="bg-purple-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">BEBAS ADMIN</span>
+                            <h4 class="font-bold text-base mt-2">Transfer Tanpa Potongan Biaya</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Kirim uang ke seluruh bank dengan aman.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Grid -->
+                <div class="px-5 mt-6">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-3">Layanan & Tagihan</h3>
+                    <div class="liquid-glass rounded-3xl p-4 shadow-xl grid grid-cols-4 gap-4 text-center border border-white/50 dark:border-white/10">
+                        <button onclick="openServiceModal('Pulsa & Data')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-mobile-screen"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Pulsa</span>
+                        </button>
+                        <button onclick="openServiceModal('Listrik PLN')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-bolt"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Listrik</span>
+                        </button>
+                        <button onclick="openServiceModal('PDAM Air')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-faucet"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">PDAM</span>
+                        </button>
+                        <button onclick="openServiceModal('Internet & TV')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-wifi"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Internet</span>
+                        </button>
+                        <button onclick="openServiceModal('Voucher Game')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-gamepad"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Games</span>
+                        </button>
+                        <button onclick="openServiceModal('Investasi Emas')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-coins"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Investasi</span>
+                        </button>
+                        <button onclick="openServiceModal('BPJS Kesehatan')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">BPJS</span>
+                        </button>
+                        <button onclick="switchTab('shop')" class="flex flex-col items-center group">
+                            <div class="w-12 h-12 bg-purple-600/10 dark:bg-purple-500/20 group-hover:bg-purple-600/20 text-purple-600 dark:text-purple-300 rounded-2xl flex items-center justify-center text-lg mb-1 transition shadow-sm">
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            </div>
+                            <span class="text-[11px] font-medium text-slate-700 dark:text-slate-300">Belanja</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions Widget -->
+                <div class="px-5 mt-6 mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Aktivitas Terakhir</h3>
+                        <span class="text-xs font-semibold text-purple-600 dark:text-purple-400 cursor-pointer" onclick="switchTab('history')">Lihat Semua</span>
+                    </div>
+                    <div id="home-tx-list" class="liquid-glass rounded-3xl p-2 shadow-xl divide-y divide-slate-200/50 dark:divide-slate-800/50 border border-white/50 dark:border-white/10">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORY TAB (Riwayat) -->
+            <div id="tab-history" class="page-tab hidden p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 dark:text-white text-lg">Riwayat Transaksi</h2>
+                    <button onclick="loadHistory('all')" class="text-xs font-semibold text-purple-600 dark:text-purple-400"><i class="fa-solid fa-rotate-right mr-1"></i> Refresh</button>
+                </div>
+                <!-- Filter Pills -->
+                <div class="flex space-x-2 overflow-x-auto hide-scrollbar pb-2 mb-4">
+                    <button onclick="filterHistory('all')" class="filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-purple-600 text-white shadow-md flex-shrink-0">Semua</button>
+                    <button onclick="filterHistory('Top Up')" class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold liquid-glass dark:text-slate-300 text-slate-600 border border-white/40 flex-shrink-0">Top Up</button>
+                    <button onclick="filterHistory('Transfer')" class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold liquid-glass dark:text-slate-300 text-slate-600 border border-white/40 flex-shrink-0">Transfer</button>
+                    <button onclick="filterHistory('Pembayaran')" class="filter-btn px-4 py-1.5 rounded-full text-xs font-semibold liquid-glass dark:text-slate-300 text-slate-600 border border-white/40 flex-shrink-0">Pembayaran</button>
+                </div>
+                <!-- Transaction List -->
+                <div id="full-history-list" class="space-y-3">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- SCAN / QR PAY TAB (QRIS - Center) -->
+            <div id="tab-scan" class="page-tab hidden p-5 flex flex-col items-center justify-center min-h-[500px] text-center">
+                <div class="w-full flex items-center justify-between mb-6">
+                    <h2 class="font-bold text-slate-800 dark:text-white text-lg">QRIS Bayar</h2>
+                    <button onclick="switchTab('home')" class="w-9 h-9 liquid-glass rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-sm border border-white/40"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <!-- Simulated Camera Scanner -->
+                <div class="w-full max-w-[300px] h-[380px] bg-slate-900 rounded-[32px] relative overflow-hidden flex flex-col items-center justify-center border-4 border-purple-500 shadow-2xl">
+                    <div class="absolute inset-0 opacity-30 bg-[radial-gradient(#a855f7_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div class="w-56 h-56 border-2 border-dashed border-white/80 rounded-2xl relative flex items-center justify-center">
+                        <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-purple-400"></div>
+                        <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-purple-400"></div>
+                        <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-purple-400"></div>
+                        <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-purple-400"></div>
+                        <div class="w-full h-0.5 bg-red-500 animate-bounce absolute"></div>
+                        <i class="fa-solid fa-qrcode text-white/20 text-6xl"></i>
+                    </div>
+                    <p class="text-white text-xs mt-6 z-10 px-4">Arahkan kamera ke QRIS Merchant untuk membayar</p>
+                </div>
+                <div class="mt-6 flex space-x-3 w-full max-w-[300px]">
+                    <button onclick="simulateQRPaySuccess('Kopi Kenangan Senopati', 35000)" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-3.5 rounded-2xl shadow-xl transition">
+                        Simulasi Sukses QRIS
+                    </button>
+                </div>
+            </div>
+
+            <!-- SHOP TAB (Belanja) -->
+            <div id="tab-shop" class="page-tab hidden p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-800 dark:text-white text-lg">Pitih Store & Belanja</h2>
+                    <button onclick="switchTab('home')" class="w-9 h-9 liquid-glass rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-sm border border-white/40"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="liquid-glass-card rounded-3xl p-5 text-white mb-5 shadow-2xl">
+                    <span class="bg-white/20 text-[10px] font-bold px-2.5 py-0.5 rounded-full">FLASH SALE VIP</span>
+                    <h3 class="font-bold text-lg mt-1">Diskon Belanja Online 70%</h3>
+                    <p class="text-xs text-purple-100 mt-0.5">Gunakan saldo Pitih untuk pembayaran instan bebas biaya.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div onclick="simulateShopItem('E-Wallet Voucher Tokopedia', 50000)" class="liquid-glass p-3 rounded-3xl shadow-lg cursor-pointer hover:scale-[1.02] transition border border-white/40">
+                        <div class="w-full h-24 bg-purple-600/10 rounded-2xl mb-2 flex items-center justify-center text-purple-600 dark:text-purple-300 text-2xl font-bold">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200 text-xs">Voucher Tokopedia</h4>
+                        <p class="text-[10px] text-purple-600 dark:text-purple-400 font-bold mt-1">Rp 50.000</p>
+                    </div>
+                    <div onclick="simulateShopItem('Voucher Belanja Shopee', 100000)" class="liquid-glass p-3 rounded-3xl shadow-lg cursor-pointer hover:scale-[1.02] transition border border-white/40">
+                        <div class="w-full h-24 bg-purple-600/10 rounded-2xl mb-2 flex items-center justify-center text-purple-600 dark:text-purple-300 text-2xl font-bold">
+                            <i class="fa-solid fa-bag-shopping"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200 text-xs">Voucher Shopee</h4>
+                        <p class="text-[10px] text-purple-600 dark:text-purple-400 font-bold mt-1">Rp 100.000</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFILE TAB (Profil) -->
+            <div id="tab-profile" class="page-tab hidden p-5">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="font-bold text-slate-800 dark:text-white text-lg">Profil Akun</h2>
+                    <button onclick="switchTab('home')" class="w-9 h-9 liquid-glass rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-sm border border-white/40"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <!-- User Card -->
+                <div class="liquid-glass-card rounded-[32px] p-6 text-white shadow-2xl text-center relative overflow-hidden mb-6">
+                    <div class="w-20 h-20 bg-purple-950 rounded-3xl mx-auto flex items-center justify-center text-white font-black text-2xl shadow-xl border-2 border-purple-400/40 mb-3 overflow-hidden">
+                        <span>PT</span>
+                    </div>
+                    <h3 class="font-bold text-lg" id="profile-name">Lionel Messi</h3>
+                    <p class="text-xs text-purple-100">082276648907 • lionel.messi@email.com</p>
+                    <p class="text-[10px] text-purple-200 italic mt-1">uangmu untuk masa depan</p>
+                    <div class="mt-4 inline-flex items-center space-x-1.5 bg-amber-400 text-slate-900 text-xs font-extrabold px-3.5 py-1 rounded-full shadow">
+                        <i class="fa-solid fa-crown"></i>
+                        <span>PITIH VIP VERIFIED</span>
+                    </div>
+                </div>
+
+                <!-- Settings Menu -->
+                <div class="liquid-glass rounded-3xl shadow-xl divide-y divide-slate-200/50 dark:divide-slate-800/50 overflow-hidden mb-6 border border-white/50 dark:border-white/10">
+                    <!-- Dark Mode Toggle Item -->
+                    <div class="p-4 flex items-center justify-between hover:bg-white/40 dark:hover:bg-slate-800/40 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center"><i class="fa-solid fa-moon"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Mode Gelap (Dark Mode)</h4>
+                                <p class="text-xs text-slate-400">Tampilan malam liquid glass</p>
+                            </div>
+                        </div>
+                        <!-- Toggle Switch -->
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="dark-mode-toggle" onchange="toggleDarkMode()" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+
+                    <div onclick="showToast('Fitur Keamanan Aktif', 'info')" class="p-4 flex items-center justify-between hover:bg-white/40 dark:hover:bg-slate-800/40 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center"><i class="fa-solid fa-lock"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Ubah PIN Pitih</h4>
+                                <p class="text-xs text-slate-400">Perbarui PIN keamanan</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+                    </div>
+                    <div onclick="showToast('Akun terverifikasi VIP KTP', 'info')" class="p-4 flex items-center justify-between hover:bg-white/40 dark:hover:bg-slate-800/40 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center"><i class="fa-solid fa-id-card"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Verifikasi Identitas (KYC)</h4>
+                                <p class="text-xs text-purple-600 dark:text-purple-400 font-medium">Terverifikasi VIP</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+                    </div>
+                    <div onclick="showToast('Pusat Bantuan Pitih 24/7', 'info')" class="p-4 flex items-center justify-between hover:bg-white/40 dark:hover:bg-slate-800/40 cursor-pointer transition">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-purple-600/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center"><i class="fa-solid fa-headset"></i></div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">Pusat Bantuan</h4>
+                                <p class="text-xs text-slate-400">Customer Care</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Logout Button -->
+                <button onclick="logoutApp()" class="w-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold py-3.5 rounded-2xl text-sm transition flex items-center justify-center space-x-2 border border-rose-500/20 shadow-sm">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Keluar Aplikasi</span>
+                </button>
+            </div>
+
+        </main>
+
+        <!-- 4. BOTTOM NAVIGATION BAR (Order: Beranda, Riwayat, QRIS (center, larger & elevated), Belanja, Profil) -->
+        <nav id="bottom-nav" class="absolute bottom-0 left-0 right-0 liquid-glass px-3 py-2 grid grid-cols-5 items-center z-30 hidden shadow-2xl border-t border-white/50 dark:border-white/10">
+            <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center justify-center text-purple-600 dark:text-purple-400 py-1 transition" data-target="home">
+                <i class="fa-solid fa-house text-lg mb-0.5"></i>
+                <span class="text-[10px] font-bold">Beranda</span>
+            </button>
+            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 py-1 transition" data-target="history">
+                <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Riwayat</span>
+            </button>
+            <!-- Center QRIS button (larger and slightly floating) -->
+            <button onclick="switchTab('scan')" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 py-1 transition relative -top-4" data-target="scan">
+                <div class="w-14 h-14 bg-gradient-to-tr from-purple-700 to-purple-500 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white dark:border-slate-900 transform hover:scale-110 active:scale-95 transition">
+                    <i class="fa-solid fa-qrcode text-xl"></i>
+                </div>
+                <span class="text-[10px] font-extrabold text-purple-700 dark:text-purple-300 mt-0.5">QRIS</span>
+            </button>
+            <button onclick="switchTab('shop')" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 py-1 transition" data-target="shop">
+                <i class="fa-solid fa-bag-shopping text-lg mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Belanja</span>
+            </button>
+            <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center justify-center text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 py-1 transition" data-target="profile">
+                <i class="fa-solid fa-user text-lg mb-0.5"></i>
+                <span class="text-[10px] font-semibold">Profil</span>
+            </button>
+        </nav>
+
+        <!-- 5. MODALS -->
+
+        <!-- TOP UP MODAL -->
+        <div id="modal-topup" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end justify-center hidden transition-opacity">
+            <div class="liquid-glass w-full max-w-[430px] rounded-t-[36px] p-6 shadow-2xl border-t border-white/40 dark:border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-800 dark:text-white text-lg">Top Up Saldo Pitih</h3>
+                    <button onclick="closeModal('topup')" class="w-8 h-8 liquid-glass rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Pilih nominal instan atau metode pembayaran</p>
+                <div class="grid grid-cols-3 gap-2.5 mb-4">
+                    <button onclick="setTopupAmount(50000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 50.000</button>
+                    <button onclick="setTopupAmount(100000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 100.000</button>
+                    <button onclick="setTopupAmount(250000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 250.000</button>
+                    <button onclick="setTopupAmount(500000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 500.000</button>
+                    <button onclick="setTopupAmount(1000000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 1.000.000</button>
+                    <button onclick="setTopupAmount(2000000)" class="py-2.5 liquid-glass hover:bg-purple-500/10 border border-white/40 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition shadow-sm">Rp 2.000.000</button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nominal Lainnya (Rp)</label>
+                    <input type="number" id="topup-amount-input" placeholder="Contoh: 150000" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Metode Pembayaran</label>
+                    <select id="topup-bank-select" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                        <option value="BCA Virtual Account" class="dark:bg-slate-900">BCA Virtual Account</option>
+                        <option value="Mandiri Virtual Account" class="dark:bg-slate-900">Mandiri Virtual Account</option>
+                        <option value="BRI Virtual Account" class="dark:bg-slate-900">BRI Virtual Account</option>
+                        <option value="BNI Virtual Account" class="dark:bg-slate-900">BNI Virtual Account</option>
+                        <option value="Alfamart / Indomaret" class="dark:bg-slate-900">Alfamart / Indomaret</option>
+                    </select>
+                </div>
+                <button onclick="executeTopup()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-2xl text-sm shadow-xl transition">
+                    Top Up Sekarang
+                </button>
+            </div>
+        </div>
+
+        <!-- SEND MONEY MODAL -->
+        <div id="modal-send" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end justify-center hidden transition-opacity">
+            <div class="liquid-glass w-full max-w-[430px] rounded-t-[36px] p-6 shadow-2xl border-t border-white/40 dark:border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-800 dark:text-white text-lg">Kirim Uang</h3>
+                    <button onclick="closeModal('send')" class="w-8 h-8 liquid-glass rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nomor HP Tujuan / Kontak Pitih</label>
+                    <input type="tel" id="send-phone-input" placeholder="Contoh: 08123456789" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nominal Transfer (Rp)</label>
+                    <input type="number" id="send-amount-input" placeholder="Contoh: 50000" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Catatan (Opsional)</label>
+                    <input type="text" id="send-note-input" placeholder="Contoh: Tabungan masa depan" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <button onclick="executeSendMoney()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-2xl text-sm shadow-xl transition">
+                    Kirim Sekarang
+                </button>
+            </div>
+        </div>
+
+        <!-- SERVICE MODAL -->
+        <div id="modal-service" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-end justify-center hidden transition-opacity">
+            <div class="liquid-glass w-full max-w-[430px] rounded-t-[36px] p-6 shadow-2xl border-t border-white/40 dark:border-white/10">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="service-modal-title" class="font-bold text-slate-800 dark:text-white text-lg">Layanan Pulsa</h3>
+                    <button onclick="closeModal('service')" class="w-8 h-8 liquid-glass rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nomor Pelanggan / Nomor HP</label>
+                    <input type="text" id="service-number-input" placeholder="Masukkan nomor tujuan" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Pilih Nominal / Paket</label>
+                    <select id="service-product-select" class="w-full liquid-glass border border-white/40 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 dark:text-white focus:outline-none focus:border-purple-500">
+                        <option value="20000" class="dark:bg-slate-900">Pulsa 20.000 - Rp 21.500</option>
+                        <option value="50000" class="dark:bg-slate-900">Pulsa 50.000 - Rp 51.000</option>
+                        <option value="100000" class="dark:bg-slate-900">Pulsa 100.000 - Rp 101.000</option>
+                        <option value="150000" class="dark:bg-slate-900">Paket Data 15GB - Rp 75.000</option>
+                    </select>
+                </div>
+                <button onclick="executeServicePayment()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 rounded-2xl text-sm shadow-xl transition">
+                    Bayar Tagihan
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let appState = {
+            balance: 14850000,
+            pin: "123456",
+            enteredPin: "",
+            isBalanceHidden: false,
+            darkMode: false,
+            currentTab: "home",
+            userName: "Lionel Messi",
+            userPhone: "082276648907",
+            transactions: [
+                { id: 1, type: "Top Up", title: "Top Up via BCA VA", amount: 2000000, date: "Hari ini, 11:15", status: "Berhasil", icon: "fa-wallet", color: "text-purple-600 bg-purple-500/10 dark:text-purple-300" },
+                { id: 2, type: "Transfer", title: "Kirim ke Antonela R.", amount: -500000, date: "Kemarin, 16:40", status: "Berhasil", icon: "fa-paper-plane", color: "text-purple-600 bg-purple-500/10 dark:text-purple-300" },
+                { id: 3, type: "Pembayaran", title: "Bayar QRIS Restoran Buenos Aires", amount: -350000, date: "11 Nov, 20:30", status: "Berhasil", icon: "fa-qrcode", color: "text-purple-600 bg-purple-500/10 dark:text-purple-300" },
+                { id: 4, type: "Top Up", title: "Top Up via Mandiri VA", amount: 1500000, date: "09 Nov, 12:00", status: "Berhasil", icon: "fa-wallet", color: "text-purple-600 bg-purple-500/10 dark:text-purple-300" }
+            ]
+        };
+
+        function loadStorage() {
+            const saved = localStorage.getItem('pitih_wallet_state_ios26');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    appState.balance = parsed.balance;
+                    appState.darkMode = parsed.darkMode || false;
+                    appState.transactions = parsed.transactions || appState.transactions;
+                } catch(e) {}
+            }
+            applyDarkModeSetting();
+        }
+
+        function saveStorage() {
+            localStorage.setItem('pitih_wallet_state_ios26', JSON.stringify({
+                balance: appState.balance,
+                darkMode: appState.darkMode,
+                transactions: appState.transactions
+            }));
+        }
+
+        function applyDarkModeSetting() {
+            const htmlEl = document.documentElement;
+            const toggle = document.getElementById('dark-mode-toggle');
+            if (appState.darkMode) {
+                htmlEl.classList.add('dark');
+                if (toggle) toggle.checked = true;
+            } else {
+                htmlEl.classList.remove('dark');
+                if (toggle) toggle.checked = false;
+            }
+        }
+
+        function toggleDarkMode() {
+            appState.darkMode = !appState.darkMode;
+            applyDarkModeSetting();
+            saveStorage();
+            showToast(appState.darkMode ? "Mode Gelap diaktifkan" : "Mode Terang diaktifkan", "info");
+        }
+
+        window.onload = function() {
+            loadStorage();
+            updateUI();
+            
+            setTimeout(() => {
+                const splash = document.getElementById('screen-splash');
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.classList.add('hidden');
+                    document.getElementById('screen-auth').classList.remove('hidden');
+                }, 700);
+            }, 1800);
+        };
+
+        function pressPin(digit) {
+            if (appState.enteredPin.length < 6) {
+                appState.enteredPin += digit;
+                updatePinDots();
+                if (appState.enteredPin.length === 6) {
+                    setTimeout(verifyPin, 300);
+                }
+            }
+        }
+
+        function deletePin() {
+            if (appState.enteredPin.length > 0) {
+                appState.enteredPin = appState.enteredPin.slice(0, -1);
+                updatePinDots();
+            }
+        }
+
+        function resetPin() {
+            appState.enteredPin = "";
+            updatePinDots();
+        }
+
+        function updatePinDots() {
+            const dots = document.querySelectorAll('.pin-dot');
+            dots.forEach((dot, idx) => {
+                if (idx < appState.enteredPin.length) {
+                    dot.classList.add('bg-purple-600', 'border-purple-600');
+                } else {
+                    dot.classList.remove('bg-purple-600', 'border-purple-600');
+                }
+            });
+        }
+
+        function verifyPin() {
+            if (appState.enteredPin === appState.pin) {
+                showToast("Autentikasi Berhasil!", "success");
+                document.getElementById('screen-auth').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                updateUI();
+            } else {
+                showToast("PIN Salah! Coba 123456", "error");
+                appState.enteredPin = "";
+                updatePinDots();
+            }
+        }
+
+        function updateUI() {
+            const balanceEl = document.getElementById('balance-display');
+            if (appState.isBalanceHidden) {
+                balanceEl.innerText = "Rp ••••••••";
+            } else {
+                balanceEl.innerText = formatRupiah(appState.balance);
+            }
+            renderTransactions();
+        }
+
+        function formatRupiah(num) {
+            return "Rp " + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        function toggleBalance() {
+            appState.isBalanceHidden = !appState.isBalanceHidden;
+            const eyeIcon = document.getElementById('eye-icon');
+            const eyeText = document.getElementById('eye-text');
+            if (appState.isBalanceHidden) {
+                eyeIcon.className = "fa-regular fa-eye-slash";
+                eyeText.innerText = "Tampilkan";
+            } else {
+                eyeIcon.className = "fa-regular fa-eye";
+                eyeText.innerText = "Sembunyikan";
+            }
+            updateUI();
+        }
+
+        function switchTab(tabName) {
+            appState.currentTab = tabName;
+            document.querySelectorAll('.page-tab').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const target = btn.getAttribute('data-target');
+                if (target === tabName) {
+                    btn.classList.remove('text-slate-400');
+                    btn.classList.add('text-purple-600', 'dark:text-purple-400');
+                } else if (target !== 'scan') {
+                    btn.classList.remove('text-purple-600', 'dark:text-purple-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabName === 'history') {
+                loadHistory('all');
+            }
+            if (tabName === 'profile') {
+                applyDarkModeSetting();
+            }
+        }
+
+        function openModal(modalName) {
+            document.getElementById('modal-' + modalName).classList.remove('hidden');
+        }
+
+        function closeModal(modalName) {
+            document.getElementById('modal-' + modalName).classList.add('hidden');
+        }
+
+        function openServiceModal(serviceName) {
+            document.getElementById('service-modal-title').innerText = "Pembayaran " + serviceName;
+            openModal('service');
+        }
+
+        function addTransaction(type, title, amount, status = "Berhasil") {
+            const newTx = {
+                id: Date.now(),
+                type: type,
+                title: title,
+                amount: amount,
+                date: "Baru saja",
+                status: status,
+                icon: type === 'Top Up' ? 'fa-wallet' : (type === 'Transfer' ? 'fa-paper-plane' : 'fa-qrcode'),
+                color: 'text-purple-600 bg-purple-500/10 dark:text-purple-300'
+            };
+            appState.transactions.unshift(newTx);
+            appState.balance += amount;
+            saveStorage();
+            updateUI();
+        }
+
+        function renderTransactions(filter = 'all') {
+            const homeList = document.getElementById('home-tx-list');
+            const fullList = document.getElementById('full-history-list');
+
+            let filtered = appState.transactions;
+            if (filter !== 'all') {
+                filtered = appState.transactions.filter(t => t.type === filter);
+            }
+
+            let homeHtml = '';
+            appState.transactions.slice(0, 3).forEach(tx => {
+                homeHtml += createTxItemHTML(tx);
+            });
+            homeList.innerHTML = homeHtml || '<p class="text-center text-xs text-slate-400 py-4">Belum ada transaksi</p>';
+
+            let fullHtml = '';
+            filtered.forEach(tx => {
+                fullHtml += createTxItemHTML(tx);
+            });
+            fullList.innerHTML = fullHtml || '<div class="text-center py-10 text-slate-400 text-xs">Tidak ada riwayat untuk kategori ini</div>';
+        }
+
+        function createTxItemHTML(tx) {
+            const isPos = tx.amount > 0;
+            const amtStr = (isPos ? "+ " : "- ") + formatRupiah(Math.abs(tx.amount));
+            const amtColor = isPos ? "text-purple-600 dark:text-purple-400" : "text-slate-800 dark:text-slate-200";
+            return `
+                <div class="flex items-center justify-between p-3 hover:bg-white/40 dark:hover:bg-slate-800/40 rounded-2xl transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 ${tx.color} rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm border border-white/20">
+                            <i class="fa-solid ${tx.icon}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 dark:text-slate-200 text-xs">${tx.title}</h4>
+                            <p class="text-[10px] text-slate-400">${tx.date} • <span class="text-purple-600 dark:text-purple-400 font-semibold">${tx.status}</span></p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-xs ${amtColor}">${amtStr}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterHistory(type) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.innerText.toLowerCase() === type.toLowerCase() || (type === 'all' && btn.innerText === 'Semua')) {
+                    btn.className = "filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-purple-600 text-white shadow-md flex-shrink-0";
+                } else {
+                    btn.className = "filter-btn px-4 py-1.5 rounded-full text-xs font-semibold liquid-glass dark:text-slate-300 text-slate-600 border border-white/40 flex-shrink-0";
+                }
+            });
+            renderTransactions(type);
+        }
+
+        function loadHistory(type) {
+            filterHistory(type);
+            showToast("Riwayat diperbarui", "success");
+        }
+
+        function setTopupAmount(amount) {
+            document.getElementById('topup-amount-input').value = amount;
+        }
+
+        function executeTopup() {
+            const amountInput = document.getElementById('topup-amount-input').value;
+            const bank = document.getElementById('topup-bank-select').value;
+            const amount = parseInt(amountInput);
+
+            if (!amount || amount <= 0) {
+                showToast("Masukkan nominal top up yang valid", "error");
+                return;
+            }
+
+            addTransaction("Top Up", `Top Up via ${bank}`, amount, "Berhasil");
+            closeModal('topup');
+            showToast(`Berhasil Top Up ${formatRupiah(amount)}!`, "success");
+            document.getElementById('topup-amount-input').value = "";
+        }
+
+        function executeSendMoney() {
+            const phone = document.getElementById('send-phone-input').value;
+            const amountInput = document.getElementById('send-amount-input').value;
+            const note = document.getElementById('send-note-input').value || "Transfer Pitih";
+            const amount = parseInt(amountInput);
+
+            if (!phone || phone.length < 5) {
+                showToast("Masukkan nomor tujuan yang benar", "error");
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showToast("Masukkan nominal transfer", "error");
+                return;
+            }
+            if (amount > appState.balance) {
+                showToast("Saldo Pitih tidak mencukupi!", "error");
+                return;
+            }
+
+            addTransaction("Transfer", `Kirim ke ${phone} (${note})`, -amount, "Berhasil");
+            closeModal('send');
+            showToast(`Berhasil mengirim ${formatRupiah(amount)}!`, "success");
+            document.getElementById('send-phone-input').value = "";
+            document.getElementById('send-amount-input').value = "";
+            document.getElementById('send-note-input').value = "";
+        }
+
+        function executeServicePayment() {
+            const number = document.getElementById('service-number-input').value;
+            const select = document.getElementById('service-product-select');
+            const amount = parseInt(select.value);
+            const titleText = document.getElementById('service-modal-title').innerText;
+
+            if (!number) {
+                showToast("Masukkan nomor pelanggan dengan benar", "error");
+                return;
+            }
+            if (amount > appState.balance) {
+                showToast("Saldo Pitih tidak mencukupi!", "error");
+                return;
+            }
+
+            addTransaction("Pembayaran", `${titleText} (${number})`, -amount, "Berhasil");
+            closeModal('service');
+            showToast("Pembayaran berhasil!", "success");
+            document.getElementById('service-number-input').value = "";
+        }
+
+        function simulateQRPaySuccess(merchantName, amount) {
+            if (amount > appState.balance) {
+                showToast("Saldo Pitih tidak mencukupi!", "error");
+                return;
+            }
+            addTransaction("Pembayaran", `QRIS Bayar di ${merchantName}`, -amount, "Berhasil");
+            switchTab('home');
+            showToast(`Pembayaran ke ${merchantName} Berhasil!`, "success");
+        }
+
+        function simulateShopItem(itemName, amount) {
+            if (amount > appState.balance) {
+                showToast("Saldo Pitih tidak mencukupi!", "error");
+                return;
+            }
+            addTransaction("Pembayaran", `Belanja: ${itemName}`, -amount, "Berhasil");
+            switchTab('home');
+            showToast(`Pembelian ${itemName} Berhasil!`, "success");
+        }
+
+        function logoutApp() {
+            appState.enteredPin = "";
+            updatePinDots();
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('bottom-nav').classList.add('hidden');
+            document.getElementById('screen-auth').classList.remove('hidden');
+            showToast("Berhasil keluar akun", "info");
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = message;
+            if (type === 'success') {
+                toastIcon.className = "fa-solid fa-circle-check text-purple-600 dark:text-purple-400 text-lg";
+            } else if (type === 'error') {
+                toastIcon.className = "fa-solid fa-circle-exclamation text-rose-500 text-lg";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-info text-sky-500 text-lg";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
